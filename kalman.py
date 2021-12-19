@@ -1,7 +1,6 @@
 """Pi-kalman"""
 
-from numpy import dot, ndarray, sum, tile, linalg
-from numpy.linalg import inv
+import numpy as np
 from typing import Tuple
 
 
@@ -47,12 +46,12 @@ class KalmanFilter(object):
     """
 
     def __init__(self,
-                 A: ndarray,
-                 B: ndarray,
-                 C: ndarray,
-                 U: ndarray,
-                 Q: ndarray,
-                 R: ndarray):
+                 A: np.ndarray,
+                 B: np.ndarray,
+                 C: np.ndarray,
+                 U: np.ndarray,
+                 Q: np.ndarray,
+                 R: np.ndarray):
         """
 
         Args:
@@ -71,8 +70,8 @@ class KalmanFilter(object):
         self.R = R
 
     def prediction_step(self,
-                        X: ndarray,
-                        P: ndarray) -> Tuple[ndarray, ndarray]:
+                        X: np.ndarray,
+                        P: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """ Runs a prediction step in the kalman filter.
 
         To update the latent state z' and its mean X'|X and covariance P'|P from
@@ -100,14 +99,14 @@ class KalmanFilter(object):
             X'|X: predicted mean state estimate at time t without measurement
             P'|P: predicted state covariance at time t without measurement
         """
-        X = dot(self.A, X) + dot(self.B, self.U)
-        P = dot(self.A, dot(P, self.A.T)) + self.Q
+        X = np.dot(self.A, X) + np.dot(self.B, self.U)
+        P = np.dot(self.A, np.dot(P, self.A.T)) + self.Q
         return X, P
 
     def measurement_step(self,
-                         X: ndarray,
-                         P: ndarray,
-                         Y: ndarray) -> Tuple[ndarray, ndarray, Tuple]:
+                         X: np.ndarray,
+                         P: np.ndarray,
+                         Y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Tuple]:
         """
 
         Args:
@@ -122,12 +121,12 @@ class KalmanFilter(object):
                 ℙ(Y'| Y, U) ~ 𝒩(Y'; Y_hat, S)
                 = 𝒩(C * X, C * P * C^T + R)
         """
-        Y_hat = dot(self.C, X)
-        S = dot(self.C, dot(P, self.C.T)) + self.R
-        K = dot(P, dot(self.C.T, inv(S)))
+        Y_hat = np.dot(self.C, X)
+        S = np.dot(self.C, np.dot(P, self.C.T)) + self.R
+        K = np.dot(P, np.dot(self.C.T, np.linalg.inv(S)))
         r = Y - Y_hat
-        X = X + dot(K, r)
-        P = P - dot(K, dot(self.C, P))  # FIXME: References differ...
+        X = X + np.dot(K, r)
+        P = P - np.dot(K, np.dot(self.C, P))  # FIXME: References differ...
         return X, P, (Y_hat, S)
 
     def posterior_predictive(self, Y_hat, S):
