@@ -14,7 +14,6 @@ class KalmanFilter(object):
     𝛆 ~ 𝒩(0, Q)
     𝛅 ~ 𝒩(0, R)
     
-
     So that,
     ℙ(z'| z) ~ 𝒩(A * z + B * U, Q)
     ℙ(y' | z') ~ 𝒩(C * z', R)
