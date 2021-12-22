@@ -53,24 +53,9 @@
     ```bash
     la -la ~/Documents/Pi-kalman
     ```
-    You should see a vareity of files that were cloned from the remote GitHub repository:
-    ```
-    pi@raspberrypi:~ $ ls -la ~/Documents/Pi-kalman/
-    total 40
-    drwxr-xr-x 4 pi pi 4096 Dec 18 14:43 .
-    drwxr-xr-x 3 pi pi 4096 Dec 18 14:42 ..
-    drwxr-xr-x 8 pi pi 4096 Dec 18 15:03 .git
-    -rw-r--r-- 1 pi pi   66 Dec 18 14:43 .gitattributes
-    -rw-r--r-- 1 pi pi    7 Dec 18 14:43 .gitignore
-    drwxr-xr-x 3 pi pi 4096 Dec 18 14:43 .idea
-    -rw-r--r-- 1 pi pi 5607 Dec 18 15:03 kalman.py
-    -rw-r--r-- 1 pi pi  610 Dec 18 14:43 README.md
-    -rw-r--r-- 1 pi pi    5 Dec 18 14:43 requirements.txt
-    ...
-    ```
-    Most importantly, we can now access some important files that we will use later on:
+    You should see a variety of files that were cloned from the remote GitHub repository. Most importantly, we can now access some important files that we will use later on:
     ```bash
-    cat ~/Documents/Pi-kalman/kalman.py
+    cat ~/Documents/Pi-kalman/gps_tracker.py
     ```
     ```
     """Pi-kalman"""
@@ -82,6 +67,65 @@
     ...
     ```
 
+## Setting up Python on Raspberry Pi
+### Python
+Two versions of Python come built-in with Raspberry Pi. We can easily see them using the `python` and `python3` alias commands:
+```
+pi@raspberrypi:~ $ python --version
+Python 2.7.18
+```
+
+```
+pi@raspberrypi:~ $ python3 --version
+Python 3.9.2
+```
+For our purposes, `Python 3.9.2` will work just fine. 
+### Python Libraries
+We will need additional libraries, specifically:
+```bash
+pi@raspberrypi:~/Documents/Pi-kalman $ cat ~/Documents/Pi-kalman/requirements.txt
+numpy
+```
+For `numpy` to work on the `Raspberry Pi`, [we need one additional library](https://stackoverflow.com/questions/53347759/importerror-libcblas-so-3-cannot-open-shared-object-file-no-such-file-or-dire):
+```bash
+sudo apt-get install libatlas-base-dev
+```
+
+### [Virtual Environment](https://docs.python.org/3/tutorial/venv.html)
+We can finish our installs inside a `Virtual Environment` which you can think of as a standalone copy of Python that is isolated from both of the base installations (`Python 2.7.18` and `Python 3.9.2`). We will use this version of `Virtual Environment`:
+```bash
+sudo apt install virtualenv python3-virtualenv -y
+```
+The advantage to this is that if we break our `Virtual Environment`, then we can simply delete the `Virtual Environment` files and not corrupt our default builds.
+Create a `Virtual Environment` using:
+```bash
+cd ~/Documents/Pi-kalman/
+virtualenv -p /usr/bin/python3 venv
+source venv/bin/activate
+```
+Now the command line should appear as:
+```
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $
+```
+Where `(venv)` appears as a prefix to our username. We can verify the python files and libraries with:
+```bash
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $ ls venv/bin
+activate  activate.csh  activate.fish  Activate.ps1  easy_install  easy_install-3.9  f2py  f2py3  f2py3.9  pip  pip3  pip3.9  python  python3  python3.9
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $ which python
+/home/pi/Documents/Pi-kalman/venv/bin/python
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $ pip freeze
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $ 
+```
+Which shows we are using `/home/pi/Documents/Pi-kalman/venv/bin/python` which is the `venv`'s `bin` folder and that the libraries installed are empty currently.
+Finally, install `numpy` on `venv` with:
+```bash
+pip install numpy -v
+```
+You should see [`"https://www.piwheels.org/simple/numpy/numpy-1.21.5-cp39-cp39-linux_armv7l.whl"`](https://www.piwheels.org/) mentioned somewhere in the output which tells us we are using the Raspberry-Pi specific pypi server. Then we verify
+```bash
+(venv) pi@raspberrypi:~/Documents/Pi-kalman $ pip freeze
+numpy==1.21.5
+```
 ## Setting up Skyhook on the Raspberry Pi
 [skyhook](https://www.skyhook.com/devices/raspberry_pi_cartracker_location_tutorial)
 

@@ -1,3 +1,6 @@
+# virtual environment for python
 /venv/*
-/tracker/tokens/*
+# wpsapitest
 /tracker/*
+# token output from wpsapitest
+/tracker/tokens/*
