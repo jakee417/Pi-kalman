@@ -4,7 +4,7 @@ import numpy as np
 from typing import Tuple
 
 
-class KalmanFilter(object):
+class LinearGaussianStateSpaceModel(object):
     """ Minimal implementation of a linear gaussian (LG) state space model (SSM)
 
     A (stationary) linear gaussian state space model is defined as:
@@ -82,7 +82,7 @@ class KalmanFilter(object):
         ```
         ℙ(z' | y_{1:t-1}, u) = ∫ ℙ(z' | y_{1:t-1}, u, z) * ℙ(z | X, P) * dz  (1)
         = ∫ ℙ(z' | u, z) * ℙ(z | X, P) dz                                    (2)
-        = ∫ 𝒩(z'; A * z + B * u, Q) * 𝒩(z; X, P) dz                         (3)
+        = ∫ 𝒩(z'; A * z + B * U, Q) * 𝒩(z; X, P) dz                         (3)
         = 𝒩(z'; X'|X, P'|P)                                                 (4)
         X'|X = A * X + B * U
         P'|P = A * P * A^T + Q
@@ -107,7 +107,7 @@ class KalmanFilter(object):
                          X: np.ndarray,
                          P: np.ndarray,
                          Y: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Tuple]:
-        """
+        """ Runs a measurement update step in the kalman filter.
 
         Args:
             X'|X: predicted mean state estimate at time t without measurement
@@ -126,7 +126,8 @@ class KalmanFilter(object):
         K = np.dot(P, np.dot(self.C.T, np.linalg.inv(S)))
         r = Y - Y_hat
         X = X + np.dot(K, r)
-        P = P - np.dot(K, np.dot(self.C, P))  # FIXME: References differ...
+        P = P - np.dot(K, np.dot(self.C,  P))  # FIXME: References differ...
+        # P = P - dot(K, dot(S, K.T))
         return X, P, (Y_hat, S)
 
     def posterior_predictive(self, Y_hat, S):
@@ -142,3 +143,95 @@ class KalmanFilter(object):
         X, P, params = self.measurement_step(X, P, Y)
         Y_post = self.posterior_predictive(*params)
         return X, P, Y_post
+
+
+class GPSTracker(LinearGaussianStateSpaceModel):
+    """ GPS Tracker application as a Linear Gaussian State Space Model.
+
+    Implements a Linear Gaussian State Space Model for n-dimensional tracking.
+    Review on a LG-SSM is as follows:
+    z' = A * z + B * U + 𝛆      (transition model)
+    y' = C * z' + 𝛅             (observation model)
+    𝛆 ~ 𝒩(0, Q)
+    𝛅 ~ 𝒩(0, R)
+
+    And,
+    ℙ(z'| z) ~ 𝒩(A * z + B * U, Q)
+    ℙ(y' | z') ~ 𝒩(C * z', R)
+
+    Latent states (z) will represent both positions and velocities and
+    the observations (y) only need positions. Specifically for 2-dimensions:
+    ```
+    z = [x_coord, y_coord, x_velocity, y_velocity]
+
+    y = [x_coord, y_coord]
+
+    A = [[1, 0, dt, 0],
+         [0, 1, 0, dt],
+         [0, 0, 1, 0],
+         [0, 0, 0, 1]]
+
+    C = [[1, 0, 0, 0],
+         [0, 1, 0, 0]]
+
+    Q = [[1, 0, 0, 0],
+         [0, 1, 0, 0],
+         [0, 0, 1, 0],
+         [0, 0, 0, 1]]
+
+    R = [[1, 0],
+         [0, 1]]
+    ```
+    """
+
+    def __init__(self,
+                 obs_dim: int = 2,
+                 dt: float = 0.1):
+
+        # Double the latent dimension to include both speed and position
+        latent_dim = 2 * obs_dim
+
+        self.__observation_dimension = obs_dim
+        self.__latent_dimension = latent_dim
+
+        # last latent state plus a dead reckoning from the previous velocity
+        A = np.eye(latent_dim) + np.diag([dt] * obs_dim, k=obs_dim)
+
+        # no control inputs
+        B = np.eye(latent_dim)
+        U = np.zeros((latent_dim, 1))
+
+        # Reduce the 2 * obs_dim, latent_dim to just obs_dim
+        C = np.eye(latent_dim)[:obs_dim, :]
+
+        # identity noise
+        Q = np.eye(latent_dim)
+        R = np.eye(obs_dim)
+        super(GPSTracker, self).__init__(A=A, B=B, C=C, U=U, Q=Q, R=R)
+
+    @property
+    def latent_dimension(self):
+        return self.__latent_dimension
+
+    @property
+    def observation_dimension(self):
+        return self.__observation_dimension
+
+    def print_latent_state(self, X: np.ndarray) -> None:
+        print(f'coords: \n'
+              f'{X[:self.observation_dimension]}')
+        print(f'velocities: \n'
+              f'{X[self.observation_dimension:]}')
+
+    def __repr__(self):
+        return """
+        z' = A * z + B * U + 𝒩(0, Q) \n
+        A: \n {} \n
+        B: \n {} \n
+        U: \n {} \n
+        Q: \n {} \n
+        y' = C * z' + 𝒩(0, R)
+        C: \n {} \n
+        R: \n {}
+        """.format(self.A, self.B, self.U, self.Q, self.C, self.R).\
+            replace(' ', '')
