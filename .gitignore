@@ -4,3 +4,8 @@
 /tracker/*
 # token output from wpsapitest
 /tracker/tokens/*
+
+/.idea/*
+/.vscode/*
+/__pycache__/*
+.gitattributes
