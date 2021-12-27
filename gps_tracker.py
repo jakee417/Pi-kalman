@@ -134,11 +134,47 @@ class LinearGaussianStateSpaceModel(object):
         # TODO: What will one step predictions show?
         return None
 
-    def offline_update(self):
-        pass
+    def offline_update(
+        self,
+        X: np.ndarray,
+        P: np.ndarray, 
+        Y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Prediction and measurement steps for an offline Kalman filter.
 
-    def online_update(self, X, P, Y):
-        """Prediction and measurement step for an online Kalman filter step."""
+        Notes: 
+            Wraps the `online_update` function over the input `Y`.
+        
+        Args:
+            X: mean state estimate of the previous step (t - 1).
+            P: state covariance of previous step (t - 1).
+            Y: observed value at time t
+        
+        Returns:
+            X_sequence: predicted mean state estimate at times 1,...,T
+        """
+        n, _ = Y.shape
+        X_list = []
+        for i in range(n):
+            Y_i = Y[i:i+1, :].T
+            X, P, _ = self.online_update(X, P, Y_i)
+            X_list.append(X)
+        X_sequence = np.concatenate(X_list, axis=-1)
+        return X_sequence
+        
+
+    def online_update(self, X: np.ndarray, P: np.ndarray, Y: np.ndarray):
+        """Prediction and measurement step for an online Kalman filter step.
+        
+        Args:
+            X: mean state estimate of the previous step (t - 1).
+            P: state covariance of previous step (t - 1).
+            Y: observed value at time t
+
+        Returns:
+            X': predicted mean state estimate at time t with measurement
+            P': predicted state covariance at time t with measurement
+            Y_hat, S: params for posterior predictive distribution
+        """
         X, P = self.prediction_step(X, P)
         X, P, params = self.measurement_step(X, P, Y)
         Y_post = self.posterior_predictive(*params)
@@ -225,11 +261,17 @@ class GPSTracker(LinearGaussianStateSpaceModel):
 
     def __repr__(self):
         return """
+        ---------------------
+        State Equation:
+        ---------------------
         z' = A * z + B * U + 𝒩(0, Q) \n
         A: \n {} \n
         B: \n {} \n
         U: \n {} \n
         Q: \n {} \n
+        ---------------------
+        Observation Equation:
+        ---------------------
         y' = C * z' + 𝒩(0, R)
         C: \n {} \n
         R: \n {}
